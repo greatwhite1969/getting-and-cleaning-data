@@ -1,0 +1,461 @@
+
+##OVERVIEW
+
+The purpose of this project is to combine training and testing measurement data for 30
+subjects over 6 activities.  The measurements relate to accelerometer readings
+for the six fitness activites.  For each subject and activity, 561 measurement 
+types were taken.  Each row (observation) in the training and testing data represents a 
+measurement event.  For a subject and activity pair, the 561 measurements could
+be a single time, or multiple times resulting in multiple observations by subject 
+and activity.  
+
+The data are broken into training (n = 7,352 obs) and testing (n = 2,947 obs) sets.  
+The combined data (n = 10,299 obs) is screened only for measurements relating to 
+mean and standard deviation, resulting in only 66 of the original 561 measurements 
+remaining in the final data.  A summarized tidy dataset is produced providing the mean 
+for each of the 66 measurements by subject and activity.  This dataset 
+is 180 observations in length (30 participants x 6 activities) with 68 variables
+(subject, activity name, and 66 measurement means).
+
+The raw data are available in a zipped file
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip 
+
+A full description of the data is available at
+
+http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones 
+
+This zipped file includes folders with subjects, activities, and 
+measurements for training and testing.  Also included are labels for the six activities and 
+names (refered to as definitions) for the measurements.  
+
+The project is completed in three steps.  Step 1 loads the training and testing data, merges the 
+the three files for each, then stacks the resulting two dataframes.  Note that
+adding the measurement (feature) definitions as variable names is included in this first step.  
+In Step 2 the variables relating to mean and standard deviation are identified and all other 
+measurement variables are trimmed from the dataframe.  The activity labels are added in 
+Step 3.  Finally, the summarized Tidy dataset is created in Step 4.
+
+
+
+#STEP 1:  READ IN DATA AND APPEND INTO A SINGLE DATAFRAME
+
+##Training Data
+
+The subject data is read into R.  
+
+```
+
+### subject file:  read in, rename column as subject, and create id for each row as a numeric variable
+
+train_subj <- read.table("./UCI HAR Dataset/train/subject_train.txt")
+str(train_subj)
+summary(train_subj)
+
+library(dplyr)
+train_subj <- rename(train_subj, subject = V1)
+
+```
+
+To aid in merging with other datframes and to retain order in an subsequent sort,
+an id variable is created from the row name and stored as numeric.  
+
+```
+
+train_subj <- cbind(idTrain = rownames(train_subj),train_subj)
+train_subj$idTrain <- as.numeric(as.character(train_subj$idTrain)) 
+
+```
+
+Next, the measurement data is read in.  This file contains the readings for 
+each of the 561 variables of interest for the 7,352 subject-activity training pairs
+
+```
+
+###  measurement data
+
+# read in
+
+train_X <- read.table("./UCI HAR Dataset/train/X_train.txt")
+str(train_X)
+
+```
+
+At this point it appeared easiest to read in the measurement (feature) 
+names (definitions) and attache them to the measurement data.
+
+```
+
+# read in feature definitions and rename columns
+
+features <- read.table("./UCI HAR Dataset/features.txt")
+
+features <- rename(features, featureId = V1, featureName = V2)
+
+```
+
+A vector of variable names is created from the features and 
+used to rename the columns of the measurement data.
+
+```
+
+# create vector of feature definitions then use with data.table function setnames
+# to set these as variable names for the measurement data
+
+featureNames <- as.vector(features$featureName)
+
+library(data.table)
+setnames(train_X, featureNames)
+
+```
+
+To aid in merging with other datframes and to retain order in an subsequent sort,
+an id variable is created from the row name and stored as numeric.  
+
+```
+
+train_X <- cbind(idTrain = rownames(train_X),train_X)
+train_X$idTrain <- as.numeric(as.character(train_X$idTrain)) 
+
+```
+
+Finally, activites are read in and an id variable is created.
+
+```
+
+train_Y <- read.table("./UCI HAR Dataset/train/Y_train.txt")
+str(train_Y)
+
+train_Y <- rename(train_Y, activityId = V1)
+
+train_Y <- cbind(idTrain = rownames(train_Y),train_Y)
+train_Y$idTrain <- as.numeric(as.character(train_Y$idTrain)) 
+
+```
+
+The subject, measurement, and activity data are now loaded.  Each contains
+7352 observations.  These three are merged into a single dataframe by the id
+variable.
+
+```
+
+### merge subject, activity, and measurement dataframes by idTrain
+
+train_final <- merge(train_subj, train_Y, by = "idTrain")
+
+train_final <- merge(train_final, train_X, by = "idTrain")
+
+```
+
+
+##Testing Data
+
+The steps are identical for the training data above, with the exception that
+the feature definitions are already loaded in.  
+
+The subject data is read into R.  
+
+```
+
+### subject file:  read in, rename column as subject, and create id for each row as a numeric variable
+
+test_subj <- read.table("./UCI HAR Dataset/test/subject_test.txt")
+str(test_subj)
+summary(test_subj)
+
+library(dplyr)
+test_subj <- rename(test_subj, subject = V1)
+
+```
+
+To aid in merging with other datframes and to retain order in an subsequent sort,
+an id variable is created from the row name and stored as numeric.  
+
+```
+
+test_subj <- cbind(idTest = rownames(test_subj),test_subj)
+test_subj$idTest <- as.numeric(as.character(test_subj$idTest)) 
+
+```
+
+Next, the measurement data is read in.  This file contains the readings for 
+each of the 561 variables of interest for the 2,947 subject-activity testing pairs
+
+```
+
+###  measurement data
+
+# read in
+
+test_X <- read.table("./UCI HAR Dataset/test/X_test.txt")
+str(test_X)
+
+```
+The vector of variable names created from the features under the training step is
+used to rename the columns of the measurement data.
+
+```
+
+# use vector of feature definitions (created above) with data.table function setnames
+# to set these as variable names for the measurement data
+
+setnames(test_X, featureNames)
+
+
+```
+
+To aid in merging with other datframes and to retain order in an subsequent sort,
+an id variable is created from the row name and stored as numeric.  
+
+```
+
+test_X <- cbind(idTest = rownames(test_X),test_X)
+test_X$idTest <- as.numeric(as.character(test_X$idTest))
+
+```
+
+Finally, activites are read in and an id variable is created.
+
+```
+
+test_Y <- read.table("./UCI HAR Dataset/test/Y_test.txt")
+str(test_Y)
+
+test_Y <- rename(test_Y, activityId = V1)
+
+test_Y <- cbind(idTest = rownames(test_Y),test_Y)
+test_Y$idTest <- as.numeric(as.character(test_Y$idTest)) 
+
+```
+
+The subject, measurement, and activity data are now loaded.  Each contains
+2947 observations.  These three are merged into a single dataframe by the id
+variable.
+
+```
+
+### merge subject, activity, and measurement dataframes by idTrain
+
+test_final <- merge(test_subj, test_Y, by = "idTest")
+
+test_final <- merge(test_final, test_X, by = "idTest")
+
+```
+
+##Putting the Training and Testing Data Together
+
+The training and testing dataframes are now ready to be appended, or stacked 
+together.  
+
+This operation is performed simply with the bind_rows function from dplyr.  
+Note that rbind will not work since the id variables in each dataframe have
+different names.  The bind_rows function will stack the data with common 
+variable names together and retain the other variables as separate columns.
+
+This combined datafrae will have 10,299 observations (7,352 training + 2,947 testing).
+
+```
+
+### append using bind_rows from dplyr
+
+train_test <- bind_rows(train_final, test_final)
+
+```
+
+The columns need to be reordered to bring the idTest variable to the left.
+
+```
+
+### reorder columns to bring idTest to second position
+
+train_test <- train_test[,c(1,565,2:564)]
+
+```
+
+Now an id for all observations is created.
+
+```
+
+### id for all observations 
+
+train_test <- cbind(idAll = rownames(train_test), train_test)
+train_test$idAll <- as.numeric(as.character(train_test$idAll)) 
+
+```
+
+#STEP 2:  RETAIN ONLY MEASUREMENT VARIABLES RELATING TO MEAND AND STANDARD DEVIATION
+
+A vector of measurement variables to keep is created from the feature names.  
+This results in a vector of 66 measurements.  
+
+```
+### vector of all variables to keep
+
+# create vector of features that are means or standard deviations from vector
+# of feature names using grep (remove meanFreq with grepl)
+
+incl <- grep("mean()|std()", features$featureName, value = TRUE)
+incl <- incl[!grepl("Freq", incl)] # remove variables for meanFreq
+
+```
+
+The three id variables (idALL, idTrain, and idTest) along with the subject number
+and activity id are added in.    Now there are 71 variables to keep.  
+
+```
+# add first names of first five columns of combined train & test data
+
+incl <- c(names(train_test[1:5]),incl)
+
+```
+Measurement variables not relating to mean and standard deviation are trimmed away
+
+```
+
+train_test_msd <- subset(train_test, select = incl)
+
+```
+
+#STEP 3:  ATTACH ACTIVITY LABELS
+
+The final step in creating the full version of the combined training and testing 
+data is to attach the labels for each of the six activites.
+
+The file with the names (labels) for each of the six activities is read in.
+
+```
+
+### read in activity labels and rename columns
+
+labels <- read.table("./UCI HAR Dataset/activity_labels.txt")
+str(labels)
+
+labels <- rename(labels, activityId = V1, activityName = V2)
+
+```
+
+The labels are merged with the combined training and testing dataframe.
+
+```
+### merge train_test_msd dataframe with activity labels by activityID
+
+train_test_msd <- merge(train_test_msd, labels, by = "activityId")
+
+```
+The merge results in the columns losing their order and the observations 
+being reordered.  The following steps put everything back into place.
+
+```
+### reorder columns 
+
+train_test_msd <- train_test_msd[, c(2:5,1,72,6:71)]
+
+
+### sort by idAll with arrange from dplyr package
+
+train_test_msd <- arrange(train_test_msd, idAll)
+
+```
+
+This final dataframe contains 72 variables:
+
+idAll:         an id number for the 10,299 observations (1,2,...,10298,10299)
+
+idTrain:       an id number for the 7,352 training observations (1,2,...,7351,7352);
+               equal to NA for testing observations
+               
+idTest:        an id number for the 2,947 testing observations (1,2,...,2946,2947);
+               equal to NA for training observations
+               
+subject:       id for the 30 subjects (1,2,...,29,30)
+
+activityID:    activity number (1,2,3,4,5,6)
+
+activityName:  name or label for each of the six activities
+               (walking,walking,walking_upstairs,walking_downstairs,standing,sitting)
+               
+Maintaining the idTrain and idTest variables in this dataset will enable the user to track
+rows (observations) back to their source data.
+               
+The other 66 variables correspond to the mean of measurements of mean and standard deviation.
+The eight variables followed by XYZ were taken in three planes (24 total variables).  The addition
+of the nine other variables totals 33 measurements.  For each mean and standard deviation there are 
+66 measurements.  
+
+tBodyAcc-XYZ
+
+tGravityAcc-XYZ
+
+tBodyAccJerk-XYZ
+
+tBodyGyro-XYZ
+
+tBodyGyroJerk-XYZ
+tBodyAccMag
+
+tGravityAccMag
+
+tBodyAccJerkMag
+
+tBodyGyroMag
+
+tBodyGyroJerkMag
+
+fBodyAcc-XYZ
+
+fBodyAccJerk-XYZ
+
+fBodyGyro-XYZ
+
+fBodyAccMag
+
+fBodyAccJerkMag
+
+fBodyGyroMag
+
+fBodyGyroJerkMag 
+
+#STEP 4:  TIDY DATA
+
+The combinded dataframe of 10,299 observations includes multiple measurement events for 
+each subject-activity pair.  The final step in this project is to create a tidy dataset
+with the mean of each of the 66 measurement variables by subject and activity.  This final
+summarized dataset will contain 180 observations (30 subjects x 6 activities) and 68 
+variables (subject, activity name, and the mean of 66 measurement variables as defined above).
+
+The dimensionality of the large dataframe is reduced by taking out the three id variables
+and the activity number.
+
+```
+
+### reduce dimensions of data- only need subject, activity label, and measurements
+
+tidy_work <- subset(train_test_msd, select = -c(1,2,3,5))
+
+```
+
+The plyr package is called and the mean is calculated for each of the 66 
+measurements by subject and activity.
+
+
+```
+
+### obtain mean for each of the 66 variables relating to feature means and std dev
+# using ddply from plyr package.  specifying subject and activity as the 
+# variables to group by, the numcolwise function will return the mean 
+# for the remaining columns
+
+library(plyr)
+
+tidy_summ <- ddply(tidy_work, .(subject, activityName), numcolwise(mean))
+
+```
+
+The resulting (180 x 68) dataframe is output to a text file.
+
+```
+### output to text file
+
+write.table(tidy_summ, "tidy_summ.txt", sep = "\t", row.names = FALSE) 
+
+```
