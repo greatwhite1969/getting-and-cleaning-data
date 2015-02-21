@@ -283,7 +283,7 @@ train_test$idAll <- as.numeric(as.character(train_test$idAll))
 
 ```
 
-#STEP 2:  RETAIN ONLY MEASUREMENT VARIABLES RELATING TO MEAND AND STANDARD DEVIATION
+#STEP 2:  RETAIN ONLY MEASUREMENT VARIABLES RELATING TO MEAN AND STANDARD DEVIATION
 
 A vector of measurement variables to keep is created from the feature names.  
 This results in a vector of 66 measurements.  
